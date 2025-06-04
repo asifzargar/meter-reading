@@ -112,7 +112,7 @@ function MeterEdit() {
           letterSpacing: "2px",
         }}
       >
-        0000
+        0001
       </div>
 
       <img
