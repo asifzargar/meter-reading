@@ -17,9 +17,9 @@ export default function LoginPage() {
   const onSubmit = async (data) => {
     try {
       let res = await Api.post("/auth/login", data);
-      if (res?.token) {
-        localStorage.setItem("token", res?.token);
-      }
+      // if (res?.token) {
+      //   localStorage.setItem("token", res?.token);
+      // }
       navigate("/");
     } catch (e) {
       console.log(e.message, "dhhej");
