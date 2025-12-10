@@ -1,14 +1,16 @@
 import React, { useEffect, useRef, useState } from "react";
-import MeterImage from "./assets/meter2.jpg";
-import MeterImage2 from "./assets/meter1.jpg";
+import MeterImage6 from "./assets/meter6_1.png";
+import MeterImage7 from "./assets/meter6_2.png";
 import { useNavigate } from "react-router-dom";
 import EmailJSON from "./email.json";
+import { enqueueSnackbar } from "notistack";
+import Api from "./services/api";
+import { Slider, Stack } from "@mui/material";
 
 function MeterEdit() {
   const meterReadingRef = useRef(null);
-  const [zoom, setZoom] = useState(1);
-  const [next, setNext] = useState(1);
-  const [position, setPosition] = useState({ x: 120, y: 0 });
+  const [zoom, setZoom] = useState(0.4);
+  const [position, setPosition] = useState({ x: 120, y: 15 });
   const offset = useRef({ x: 0, y: 0 });
   let navigate = useNavigate();
 
@@ -35,7 +37,7 @@ function MeterEdit() {
   };
 
   const zoomIn = () => setZoom((z) => Math.min(z + 0.1, 3));
-  const zoomOut = () => setZoom((z) => Math.max(z - 0.1, 0.5));
+  const zoomOut = () => setZoom((z) => Math.max(z - 0.1, 0.2));
 
   useEffect(() => {
     let authPassword = localStorage.getItem("authTokenPassword");
@@ -73,21 +75,54 @@ function MeterEdit() {
     document.removeEventListener("touchend", handleTouchEnd);
   };
 
+  const fetchData = async () => {
+    try {
+      const res = await Api.get("/profile");
+      const inputTime = res?.user?.expiresAt;
+      const isSmaller = new Date(inputTime) < new Date();
+      if (isSmaller) {
+        window.location.href = "/login";
+        localStorage.clear();
+      }
+    } catch (e) {
+      enqueueSnackbar("Somthing went wrong", {
+        variant: "error",
+      });
+      console.log(e);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 300000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const [value, setValue] = React.useState(50);
+
+  const handleChange = (event, newValue) => {
+    setValue(newValue);
+  };
+  const [focused, setFocused] = useState(false);
+
   return (
     <div
       style={{
         position: "relative",
         alignItems: "center",
         display: "flex",
-        justifyContent: "center",
         flexDirection: "column",
         width: "100vw",
         height: "100vh",
-        overflow: "hidden",
+        overflow: "auto",
         gap: "1rem",
+        paddingBottom: "3rem",
       }}
     >
-      <div className="controls" style={{ marginTop: "3rem" }}>
+      <Stack sx={{ width: "100%", px: 2 }}>
+        <Slider value={value} onChange={handleChange} />
+      </Stack>
+      <div className="controls">
         <button onClick={zoomIn}>Zoom In</button>
         <button onClick={zoomOut}>Zoom Out</button>
       </div>
@@ -98,6 +133,8 @@ function MeterEdit() {
         contentEditable="true"
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         style={{
           position: "absolute",
           left: `${position.x}px`,
@@ -108,32 +145,26 @@ function MeterEdit() {
           borderRadius: "4px",
           userSelect: "none",
           fontSize: "60px",
-          color: "rgba(0, 0, 0, 0.49)",
+          color: "#000",
           letterSpacing: "2px",
+          opacity: value / 100,
+          border: focused ? "2px solid black" : "2px solid transparent",
         }}
       >
         0001
       </div>
-
       <img
         id="meter-image"
-        style={{ height: "65vh", display: "block" }}
-        src={next == 1 ? MeterImage2 : next == 2 ? MeterImage : MeterImage}
+        style={{ height: "65vh", display: "block", width: "80%" }}
+        src={MeterImage7}
         alt="Meter"
       />
-      <div className="controls">
-        <button
-          onClick={() => {
-            if (next === 3) {
-              setNext(next - 1);
-            } else {
-              setNext(next + 1);
-            }
-          }}
-        >
-          Next
-        </button>
-      </div>
+      <img
+        id="meter-image"
+        style={{ height: "65vh", display: "block", width: "80%" }}
+        src={MeterImage6}
+        alt="Meter"
+      />
     </div>
   );
 }

@@ -1,29 +1,56 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import "./Login.css";
-import EmailJSON from "./email.json";
 import { useNavigate } from "react-router-dom";
-
+import Api from "./services/api";
+import { useSnackbar } from "notistack";
 export default function LoginPage() {
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm();
-  const [error, setError] = useState("");
-  let navigate = useNavigate();
 
-  const onSubmit = (data) => {
-    if (
-      EmailJSON.find((val) => val.email === data.email) &&
-      EmailJSON.find((val) => val.password === data.password)
-    ) {
-      localStorage.setItem("authTokenPassword", `${data.password}`);
-      navigate("/meter-edit");
-    } else {
-      setError("Email password incorrect");
+  let navigate = useNavigate();
+  let { enqueueSnackbar } = useSnackbar();
+
+  const onSubmit = async (data) => {
+    try {
+      let res = await Api.post("/auth/login", data);
+      if (res?.token) {
+        localStorage.setItem("token", res?.token);
+      }
+      navigate("/");
+    } catch (e) {
+      console.log(e.message, "dhhej");
+      enqueueSnackbar(
+        e?.response ? e?.response?.data?.message : "Unautorized",
+        {
+          variant: "error",
+        }
+      );
+      console.log(e);
     }
   };
+
+  const getUsers = async () => {
+    try {
+      await Api.get("/auth/users");
+    } catch (e) {
+      console.log(e.message, "dhhej");
+      enqueueSnackbar(
+        e?.response ? e?.response?.data?.message : "Unautorized",
+        {
+          variant: "error",
+        }
+      );
+      console.log(e);
+    }
+  };
+
+  useEffect(() => {
+    getUsers();
+  }, []);
 
   return (
     <div className="login-container">
@@ -55,14 +82,6 @@ export default function LoginPage() {
           <button type="submit" className="login-button">
             Login
           </button>
-
-          {error ? (
-            <p className="error-text" style={{ textAlign: "center" }}>
-              {error}
-            </p>
-          ) : (
-            ""
-          )}
         </form>
       </div>
     </div>

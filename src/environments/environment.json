@@ -1,0 +1,4 @@
+{
+  "BASE_ADMIN_API_URL": "https://login-backend-neqo.onrender.com",
+  "ENV": "LOCAL"
+}
