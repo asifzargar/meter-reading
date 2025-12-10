@@ -77,7 +77,7 @@ function MeterEdit() {
 
   const fetchData = async () => {
     try {
-      const res = await Api.get("/profile");
+      const res = await Api.get("/auth/profile");
       const inputTime = res?.user?.expiresAt;
       const isSmaller = new Date(inputTime) < new Date();
       if (isSmaller) {
