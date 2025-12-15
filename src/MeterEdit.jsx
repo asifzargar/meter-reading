@@ -1,243 +1,199 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import EmailJSON from "./email.json";
-import { enqueueSnackbar } from "notistack";
-import Api from "./services/api";
 import { Slider, Stack } from "@mui/material";
+import EmailJSON from "./email.json";
+import Api from "./services/api";
+import { enqueueSnackbar } from "notistack";
 
 function MeterEdit({ val }) {
-  const meterReadingRef = useRef(null);
-  const meterReadingRef2 = useRef(null);
-  const [zoom, setZoom] = useState(0.5);
-  const [position, setPosition] = useState({ x: 25, y: 31 });
-  const [position2, setPosition2] = useState({ x: 45, y: 47 });
+  const navigate = useNavigate();
+  const containerRef = useRef(null);
+  const activeRef = useRef(null);
+
   const offset = useRef({ x: 0, y: 0 });
-  let navigate = useNavigate();
 
-  const handleMouseDown = (e) => {
-    const rect = meterReadingRef.current.getBoundingClientRect();
-    offset.current = {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    };
+  const [zoom, setZoom] = useState(0.55);
+  const [opacity, setOpacity] = useState(70);
 
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-  };
+  const [positions, setPositions] = useState({
+    text1: { x: 36, y: 31.5 },
+    text2: { x: 57, y: 49.5 },
+  });
 
-  const handleMouseMove = (e) => {
-    const newX = e.clientX - offset.current.x;
-    const newY = e.clientY - offset.current.y;
-    setPosition({ x: newX, y: newY });
-  };
-
-  const handleMouseUp = () => {
-    document.removeEventListener("mousemove", handleMouseMove);
-    document.removeEventListener("mouseup", handleMouseUp);
-  };
-
-  const handleMouseDown2 = (e) => {
-    const rect = meterReadingRef2.current.getBoundingClientRect();
-    offset.current = {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    };
-
-    document.addEventListener("mousemove", handleMouseMove2);
-    document.addEventListener("mouseup", handleMouseUp2);
-  };
-
-  const handleMouseMove2 = (e) => {
-    const newX = e.clientX - offset.current.x;
-    const newY = e.clientY - offset.current.y;
-    setPosition2({ x: newX, y: newY });
-  };
-
-  const handleMouseUp2 = () => {
-    document.removeEventListener("mousemove", handleMouseMove2);
-    document.removeEventListener("mouseup", handleMouseUp2);
-  };
-
-  const zoomIn = () => setZoom((z) => Math.min(z + 0.1, 3));
-  const zoomOut = () => setZoom((z) => Math.max(z - 0.1, 0.2));
-
+  /* -------------------- AUTH CHECK -------------------- */
   useEffect(() => {
-    let authPassword = localStorage.getItem("authTokenPassword");
+    const authPassword = localStorage.getItem("authTokenPassword");
     if (
-      EmailJSON.find(
-        (val) => `${val.password}` === JSON.parse(JSON.stringify(authPassword))
+      !EmailJSON.find(
+        (v) => `${v.password}` === JSON.parse(JSON.stringify(authPassword))
       )
     ) {
-    } else {
       navigate("/");
     }
-  }, []);
+  }, [navigate]);
 
-  const handleTouchStart = (e) => {
-    const touch = e.touches[0];
-    const rect = meterReadingRef.current.getBoundingClientRect();
-    offset.current = {
-      x: touch.clientX - rect.left,
-      y: touch.clientY - rect.top,
-    };
-
-    document.addEventListener("touchmove", handleTouchMove);
-    document.addEventListener("touchend", handleTouchEnd);
-  };
-
-  const handleTouchMove = (e) => {
-    const touch = e.touches[0];
-    const newX = touch.clientX - offset.current.x;
-    const newY = touch.clientY - offset.current.y;
-    setPosition({ x: newX, y: newY });
-  };
-
-  const handleTouchEnd = () => {
-    document.removeEventListener("touchmove", handleTouchMove);
-    document.removeEventListener("touchend", handleTouchEnd);
-  };
-
-  const handleTouchStart2 = (e) => {
-    const touch = e.touches[0];
-    const rect = meterReadingRef2.current.getBoundingClientRect();
-    offset.current = {
-      x: touch.clientX - rect.left,
-      y: touch.clientY - rect.top,
-    };
-
-    document.addEventListener("touchmove", handleTouchMove2);
-    document.addEventListener("touchend", handleTouchEnd2);
-  };
-
-  const handleTouchMove2 = (e) => {
-    const touch = e.touches[0];
-    const newX = touch.clientX - offset.current.x;
-    const newY = touch.clientY - offset.current.y;
-    setPosition2({ x: newX, y: newY });
-  };
-
-  const handleTouchEnd2 = () => {
-    document.removeEventListener("touchmove", handleTouchMove2);
-    document.removeEventListener("touchend", handleTouchEnd2);
-  };
-
-  const fetchData = async () => {
-    try {
-      const res = await Api.get("/auth/profile");
-      const inputTime = res?.user?.expiresAt;
-      const isSmaller = new Date(inputTime) < new Date();
-      if (isSmaller) {
-        window.location.href = "/login";
-        localStorage.clear();
-      }
-    } catch (e) {
-      enqueueSnackbar("Somthing went wrong", {
-        variant: "error",
-      });
-      console.log(e);
-    }
-  };
-
+  /* -------------------- SESSION CHECK -------------------- */
   useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await Api.get("/auth/profile");
+        if (new Date(res?.user?.expiresAt) < new Date()) {
+          localStorage.clear();
+          window.location.href = "/login";
+        }
+      } catch {
+        enqueueSnackbar("Something went wrong", { variant: "error" });
+      }
+    };
+
     fetchData();
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  const [value, setValue] = React.useState(70);
+  /* -------------------- DRAG LOGIC -------------------- */
+  const startDrag = (e, key) => {
+    activeRef.current = key;
 
-  const handleChange = (event, newValue) => {
-    setValue(newValue);
+    const rect = e.target.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+    offset.current = {
+      x: clientX - rect.left,
+      y: clientY - rect.top,
+    };
+
+    document.addEventListener("mousemove", onDrag);
+    document.addEventListener("mouseup", stopDrag);
+    document.addEventListener("touchmove", onDrag);
+    document.addEventListener("touchend", stopDrag);
   };
 
+  const onDrag = (e) => {
+    if (!activeRef.current || !containerRef.current) return;
+
+    const container = containerRef.current.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+    const xPercent =
+      ((clientX - container.left - offset.current.x) / container.width) * 100;
+    const yPercent =
+      ((clientY - container.top - offset.current.y) / container.height) * 100;
+
+    setPositions((prev) => ({
+      ...prev,
+      [activeRef.current]: {
+        x: Math.min(Math.max(xPercent, 0), 100),
+        y: Math.min(Math.max(yPercent, 0), 100),
+      },
+    }));
+  };
+
+  const stopDrag = () => {
+    activeRef.current = null;
+    document.removeEventListener("mousemove", onDrag);
+    document.removeEventListener("mouseup", stopDrag);
+    document.removeEventListener("touchmove", onDrag);
+    document.removeEventListener("touchend", stopDrag);
+  };
+
+  /* -------------------- UI -------------------- */
   return (
     <div
       style={{
-        alignItems: "center",
-        display: "flex",
-        flexDirection: "column",
         width: "100vw",
         height: "calc(100vh - 10px)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
         overflow: "auto",
-        gap: "0rem",
       }}
     >
-      <Stack sx={{ width: "100%", px: 2 }}>
-        <Slider value={value} onChange={handleChange} />
+      <Stack sx={{ width: "90%" }}>
+        <Slider value={opacity} onChange={(_, v) => setOpacity(v)} />
       </Stack>
+
       <div className="controls">
-        <button onClick={zoomIn}>Zoom In</button>
-        <button onClick={zoomOut}>Zoom Out</button>
+        <button onClick={() => setZoom((z) => Math.min(z + 0.1, 3))}>
+          Zoom In
+        </button>
+        <button onClick={() => setZoom((z) => Math.max(z - 0.1, 0.3))}>
+          Zoom Out
+        </button>
       </div>
 
       <div
+        ref={containerRef}
         style={{
-          height: "700px",
-          width: "85%",
+          width: "90%",
+          height: "650px",
           position: "relative",
         }}
       >
-        <div
+        {/* TEXT 1 */}
+        <EditableText
+          value="0001"
           id="meterReading"
-          ref={meterReadingRef}
-          contentEditable="true"
-          onMouseDown={handleMouseDown}
-          onTouchStart={handleTouchStart}
-          style={{
-            position: "absolute",
-            left: `${position.x}%`,
-            top: `${position.y}%`,
-            transform: `scale(${zoom})`,
-            cursor: "move",
-            padding: "6px 10px",
-            borderRadius: "4px",
-            userSelect: "none",
-            fontSize: "60px",
-            color: "#000",
-            letterSpacing: "2px",
-            opacity: value / 100,
-            zIndex: 1000,
-          }}
-        >
-          0001
-        </div>
-        <div
-          // id="meterReading"
-          ref={meterReadingRef2}
-          contentEditable="true"
-          onMouseDown={handleMouseDown2}
-          onTouchStart={handleTouchStart2}
-          style={{
-            position: "absolute",
-            left: `${position2.x}%`,
-            top: `${position2.y}%`,
-            transform: `scale(${zoom})`,
-            cursor: "move",
-            padding: "6px 10px",
-            borderRadius: "4px",
-            userSelect: "none",
-            fontSize: "40px",
-            color: "#000",
-            letterSpacing: "2px",
-            opacity: value / 100,
-            zIndex: 1000,
-          }}
-        >
-          123456
-        </div>
+          pos={positions.text1}
+          zoom={zoom}
+          opacity={opacity}
+          fontSize={60}
+          onStart={(e) => startDrag(e, "text1")}
+        />
+
+        {/* TEXT 2 */}
+        <EditableText
+          value="123456"
+          id=""
+          pos={positions.text2}
+          zoom={zoom}
+          opacity={opacity}
+          fontSize={40}
+          onStart={(e) => startDrag(e, "text2")}
+        />
+
         <img
-          id="meter-image"
+          src={val}
+          alt="Meter"
           style={{
             width: "100%",
             height: "100%",
-            objectFit: "cover", // 👈 keeps aspect ratio
+            objectFit: "cover",
             display: "block",
-            transform: "rotate(-1deg)",
           }}
-          src={val}
-          alt="Meter"
         />
       </div>
+    </div>
+  );
+}
+
+/* -------------------- TEXT COMPONENT -------------------- */
+function EditableText({ id, value, pos, zoom, opacity, fontSize, onStart }) {
+  return (
+    <div
+      id={id}
+      contentEditable
+      suppressContentEditableWarning
+      onMouseDown={onStart}
+      onTouchStart={onStart}
+      style={{
+        position: "absolute",
+        left: `${pos.x}%`,
+        top: `${pos.y}%`,
+        transform: `scale(${zoom})`,
+        transformOrigin: "top left",
+        cursor: "move",
+        fontSize,
+        letterSpacing: "2px",
+        color: "#000",
+        opacity: opacity / 100,
+        userSelect: "none",
+        zIndex: 10,
+      }}
+    >
+      {value}
     </div>
   );
 }
