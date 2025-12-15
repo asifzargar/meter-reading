@@ -1,16 +1,16 @@
 import React, { useEffect, useRef, useState } from "react";
-import MeterImage6 from "./assets/meter6_1.png";
-import MeterImage7 from "./assets/meter6_2.png";
 import { useNavigate } from "react-router-dom";
 import EmailJSON from "./email.json";
 import { enqueueSnackbar } from "notistack";
 import Api from "./services/api";
 import { Slider, Stack } from "@mui/material";
 
-function MeterEdit() {
+function MeterEdit({ val }) {
   const meterReadingRef = useRef(null);
-  const [zoom, setZoom] = useState(0.4);
-  const [position, setPosition] = useState({ x: 120, y: 15 });
+  const meterReadingRef2 = useRef(null);
+  const [zoom, setZoom] = useState(0.5);
+  const [position, setPosition] = useState({ x: 25, y: 31 });
+  const [position2, setPosition2] = useState({ x: 45, y: 47 });
   const offset = useRef({ x: 0, y: 0 });
   let navigate = useNavigate();
 
@@ -34,6 +34,28 @@ function MeterEdit() {
   const handleMouseUp = () => {
     document.removeEventListener("mousemove", handleMouseMove);
     document.removeEventListener("mouseup", handleMouseUp);
+  };
+
+  const handleMouseDown2 = (e) => {
+    const rect = meterReadingRef2.current.getBoundingClientRect();
+    offset.current = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    };
+
+    document.addEventListener("mousemove", handleMouseMove2);
+    document.addEventListener("mouseup", handleMouseUp2);
+  };
+
+  const handleMouseMove2 = (e) => {
+    const newX = e.clientX - offset.current.x;
+    const newY = e.clientY - offset.current.y;
+    setPosition2({ x: newX, y: newY });
+  };
+
+  const handleMouseUp2 = () => {
+    document.removeEventListener("mousemove", handleMouseMove2);
+    document.removeEventListener("mouseup", handleMouseUp2);
   };
 
   const zoomIn = () => setZoom((z) => Math.min(z + 0.1, 3));
@@ -75,6 +97,30 @@ function MeterEdit() {
     document.removeEventListener("touchend", handleTouchEnd);
   };
 
+  const handleTouchStart2 = (e) => {
+    const touch = e.touches[0];
+    const rect = meterReadingRef2.current.getBoundingClientRect();
+    offset.current = {
+      x: touch.clientX - rect.left,
+      y: touch.clientY - rect.top,
+    };
+
+    document.addEventListener("touchmove", handleTouchMove2);
+    document.addEventListener("touchend", handleTouchEnd2);
+  };
+
+  const handleTouchMove2 = (e) => {
+    const touch = e.touches[0];
+    const newX = touch.clientX - offset.current.x;
+    const newY = touch.clientY - offset.current.y;
+    setPosition2({ x: newX, y: newY });
+  };
+
+  const handleTouchEnd2 = () => {
+    document.removeEventListener("touchmove", handleTouchMove2);
+    document.removeEventListener("touchend", handleTouchEnd2);
+  };
+
   const fetchData = async () => {
     try {
       const res = await Api.get("/auth/profile");
@@ -94,29 +140,26 @@ function MeterEdit() {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 300000);
+    const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  const [value, setValue] = React.useState(50);
+  const [value, setValue] = React.useState(70);
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
   };
-  const [focused, setFocused] = useState(false);
 
   return (
     <div
       style={{
-        position: "relative",
         alignItems: "center",
         display: "flex",
         flexDirection: "column",
         width: "100vw",
-        height: "100vh",
+        height: "calc(100vh - 10px)",
         overflow: "auto",
-        gap: "1rem",
-        paddingBottom: "3rem",
+        gap: "0rem",
       }}
     >
       <Stack sx={{ width: "100%", px: 2 }}>
@@ -128,43 +171,73 @@ function MeterEdit() {
       </div>
 
       <div
-        id="meterReading"
-        ref={meterReadingRef}
-        contentEditable="true"
-        onMouseDown={handleMouseDown}
-        onTouchStart={handleTouchStart}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
         style={{
-          position: "absolute",
-          left: `${position.x}px`,
-          top: `${position.y}px`,
-          transform: `scale(${zoom})`,
-          cursor: "move",
-          padding: "6px 10px",
-          borderRadius: "4px",
-          userSelect: "none",
-          fontSize: "60px",
-          color: "#000",
-          letterSpacing: "2px",
-          opacity: value / 100,
-          border: focused ? "2px solid black" : "2px solid transparent",
+          height: "700px",
+          width: "85%",
+          position: "relative",
         }}
       >
-        0001
+        <div
+          id="meterReading"
+          ref={meterReadingRef}
+          contentEditable="true"
+          onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
+          style={{
+            position: "absolute",
+            left: `${position.x}%`,
+            top: `${position.y}%`,
+            transform: `scale(${zoom})`,
+            cursor: "move",
+            padding: "6px 10px",
+            borderRadius: "4px",
+            userSelect: "none",
+            fontSize: "60px",
+            color: "#000",
+            letterSpacing: "2px",
+            opacity: value / 100,
+            zIndex: 1000,
+          }}
+        >
+          0001
+        </div>
+        <div
+          // id="meterReading"
+          ref={meterReadingRef2}
+          contentEditable="true"
+          onMouseDown={handleMouseDown2}
+          onTouchStart={handleTouchStart2}
+          style={{
+            position: "absolute",
+            left: `${position2.x}%`,
+            top: `${position2.y}%`,
+            transform: `scale(${zoom})`,
+            cursor: "move",
+            padding: "6px 10px",
+            borderRadius: "4px",
+            userSelect: "none",
+            fontSize: "40px",
+            color: "#000",
+            letterSpacing: "2px",
+            opacity: value / 100,
+            zIndex: 1000,
+          }}
+        >
+          123456
+        </div>
+        <img
+          id="meter-image"
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover", // 👈 keeps aspect ratio
+            display: "block",
+            transform: "rotate(-1deg)",
+          }}
+          src={val}
+          alt="Meter"
+        />
       </div>
-      <img
-        id="meter-image"
-        style={{ height: "65vh", display: "block", width: "80%" }}
-        src={MeterImage7}
-        alt="Meter"
-      />
-      <img
-        id="meter-image"
-        style={{ height: "65vh", display: "block", width: "80%" }}
-        src={MeterImage6}
-        alt="Meter"
-      />
     </div>
   );
 }

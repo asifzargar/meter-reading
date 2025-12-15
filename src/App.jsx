@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import NoInternet from "./NoInternate";
 import useNetworkStatus from "./hooks/useNetworkStatus";
 import AdminPanel from "./Admin";
+import MeterEditPage from "./MeterEditPage";
 
 function App() {
   const isOnline = useNetworkStatus({
@@ -18,7 +19,7 @@ function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={<MeterEdit />} />
+          <Route path="/" element={<MeterEditPage />} />
           <Route path="/admin" element={<AdminPanel />} />
         </Routes>
       </Router>
